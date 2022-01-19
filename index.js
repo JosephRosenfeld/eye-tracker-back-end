@@ -16,7 +16,7 @@ app.get("/products", (req, res) => {
     },
     {
       product_id: 2,
-      price: "$40",
+      price: "$50",
     },
   ]);
 });
