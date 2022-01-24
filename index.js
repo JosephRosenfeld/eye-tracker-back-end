@@ -12,8 +12,9 @@ const pgSession = connectPgSimple(session);
 dotenv.config();
 const app = express();
 
-//middlewares
-app.use(cors());
+/*--- Middlewares ---*/
+//Need cors options since we're dealing with cookies
+app.use(cors({ credentials: true, origin: "http://localhost:3000" }));
 app.use(express.json());
 app.use(
   session({
@@ -26,15 +27,48 @@ app.use(
     saveUninitialized: false /*doesn't save a cookie if we don't set anything on session*/,
     cookie: {
       maxAge: 1000 * 60 * 60 * 24,
+      httpOnly: false,
     } /*1000 miliseconds = second; 60 secs = 1min; 60 mins = 1hr; 24 hrs = 1d;*/,
   })
 );
 
-//default get on api root
-app.get("/", (req, res) => {
-  console.log(req.session);
-  req.session.user = "test";
-  res.json({ message: "api is working" });
+/*--- API Auth Section ---*/
+app.post("/api/auth/loginadmin", (req, res) => {
+  //If pin is valid (will have some encryption in here)
+  if (req.body.pin === "1234") {
+    /*We write to the session because this is what triggers the express-session
+    lib to store a cookie on the user. If the user already had a cookie from being
+    logged in as a guest, then no worries and it should just overwrite the server 
+    side specific session variable we're setting (in this case 'isAdmin and isGuest') 
+    and not change the actual client side cookie*/
+    req.session.user = {
+      isAdmin: true,
+      isGuest: false,
+    };
+    console.log(req.session);
+    res.sendStatus(200);
+  } else {
+    //If pin is invalid
+    res.status(401).send(JSON.stringify({ errorTxt: "This PIN is invalid" }));
+  }
+});
+
+app.get("/api/auth/loginguest", (req, res) => {
+  req.session.user = {
+    isAdmin: false,
+    isGuest: true,
+  };
+  res.sendStatus(200);
+});
+
+app.get("/api/auth/logincheck", (req, res) => {
+  if (req.session.user) {
+    console.log("in req");
+    console.log(req.session.user);
+    res.send(JSON.stringify({ isAdmin: req.session.user.isAdmin }));
+  } else {
+    res.status(401).send(JSON.stringify({ errorTxt: "Unauthorized" }));
+  }
 });
 
 app.get("/protected", (req, res) => {
