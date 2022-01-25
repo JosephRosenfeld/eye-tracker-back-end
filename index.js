@@ -20,6 +20,10 @@ const app = express();
 app.use(cors(/*{ credentials: true, origin: "http://localhost:3000" }*/));
 app.use(express.json());
 app.use(compression());
+app.use((req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
 /*app.use(
   session({
     store: new pgSession({
@@ -79,7 +83,7 @@ const makeRepeated = (arr, repeats) => {
   return Array.from({ length: repeats }, () => arr).flat();
 };
 
-const allLogs = makeRepeated(dayOfLogs, 1000);
+const allLogs = makeRepeated(dayOfLogs, 1001);
 
 /*Testing*/
 app.get("/api/test", (req, res) => {
