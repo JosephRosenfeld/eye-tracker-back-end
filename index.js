@@ -79,7 +79,7 @@ const makeRepeated = (arr, repeats) => {
   return Array.from({ length: repeats }, () => arr).flat();
 };
 
-const allLogs = makeRepeated(dayOfLogs, 730);
+const allLogs = makeRepeated(dayOfLogs, 1000);
 
 /*Testing*/
 app.get("/api/test", (req, res) => {
