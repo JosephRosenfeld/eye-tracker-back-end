@@ -83,7 +83,13 @@ const allLogs = makeRepeated(dayOfLogs, 730);
 
 /*Testing*/
 app.get("/api/test", (req, res) => {
+  console.log("we got hit");
   res.status(200).send(JSON.stringify({ logs: allLogs }));
+});
+
+app.get("/", (req, res) => {
+  console.log("we got hit at root");
+  res.status(200).send(JSON.stringify({ test: "test" }));
 });
 
 /*--- API Auth Section ---*/ /*
