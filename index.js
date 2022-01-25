@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import cors from "cors";
+import bcrypt from "bcrypt";
 import pool from "./config/db.js";
 //import logRoutes from "./routes/logRoutes";
 //import settingsRoutes from "./routes/settingsRoutes";
@@ -33,23 +34,41 @@ app.use(
 );
 
 /*--- API Auth Section ---*/
-app.post("/api/auth/loginadmin", (req, res) => {
-  //If pin is valid (will have some encryption in here)
-  if (req.body.pin === "1234") {
-    /*We write to the session because this is what triggers the express-session
-    lib to store a cookie on the user. If the user already had a cookie from being
-    logged in as a guest, then no worries and it should just overwrite the server 
-    side specific session variable we're setting (in this case 'isAdmin and isGuest') 
-    and not change the actual client side cookie*/
-    req.session.user = {
-      isAdmin: true,
-      isGuest: false,
-    };
-    console.log(req.session);
-    res.sendStatus(200);
-  } else {
-    //If pin is invalid
-    res.status(401).send(JSON.stringify({ errorTxt: "This PIN is invalid" }));
+app.post("/api/auth/loginadmin", async (req, res) => {
+  try {
+    //get admin pwd from db
+    const data = await pool.query(
+      `SELECT pwd_encrypted FROM person WHERE email=$1`,
+      [process.env.ADMIN_EMAIL]
+    );
+    console.log(data);
+    const adminPwdHash = data.rows[0].pwd_encrypted;
+    console.log(adminPwdHash);
+    //check hashed pwd for admin against sent pwd
+    const match = await bcrypt.compare(req.body.pwd, adminPwdHash);
+    if (match) {
+      /*We write to the session because this is what triggers the express-session
+      lib to store a cookie on the user. If the user already had a cookie from being
+      logged in as a guest, then no worries and it should just overwrite the server 
+      side specific session variable we're setting (in this case 'isAdmin and isGuest') 
+      and not change the actual client side cookie*/
+      req.session.user = {
+        isAdmin: true,
+        isGuest: false,
+      };
+      console.log(req.session);
+      res.sendStatus(200);
+    } else {
+      //If pwd is invalid
+      res
+        .status(401)
+        .send(JSON.stringify({ errorTxt: "This password is invalid" }));
+    }
+  } catch (err) {
+    console.log(err);
+    res
+      .status(500)
+      .send(JSON.stringify({ errorTxt: "Error accessing database" }));
   }
 });
 
@@ -59,6 +78,9 @@ app.get("/api/auth/loginguest", (req, res) => {
     isGuest: true,
   };
   res.sendStatus(200);
+
+  /*Some logic to copy all data from db on the only row item and then put it all
+  in the session storage*/
 });
 
 app.get("/api/auth/logincheck", (req, res) => {
