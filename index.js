@@ -1,10 +1,12 @@
-import express from "express";
 import dotenv from "dotenv";
-import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
+import express from "express";
 import cors from "cors";
-import bcrypt from "bcrypt";
+import compression from "compression";
+import session from "express-session";
 import pool from "./config/db.js";
+import connectPgSimple from "connect-pg-simple";
+import bcrypt from "bcrypt";
+
 //import logRoutes from "./routes/logRoutes";
 //import settingsRoutes from "./routes/settingsRoutes";
 
@@ -17,6 +19,7 @@ const app = express();
 //Need cors options since we're dealing with cookies
 app.use(cors({ credentials: true, origin: "http://localhost:3000" }));
 app.use(express.json());
+app.use(compression());
 app.use(
   session({
     store: new pgSession({
@@ -32,6 +35,56 @@ app.use(
     } /*1000 miliseconds = second; 60 secs = 1min; 60 mins = 1hr; 24 hrs = 1d;*/,
   })
 );
+
+const dayOfLogs = [
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  { type: "systane", date: "05-09-2000 05:20:22Z" },
+  {
+    type: "daily_review",
+    rank: "5",
+    date: "05-09-2000 05:20:22Z",
+    description:
+      "Today wasn't awful. Didn't do as much as I would have liked but thats alright. I think in the am my eyes felt kinda bad, like stuck to my eyelids I guess. Besides that though I'd say it was decent, didn't use the humidifier much during the day. Took my restasis at like 11 and 12. Also did my fish oil. Was super windy but thats about it",
+  },
+];
+
+const makeRepeated = (arr, repeats) => {
+  return Array.from({ length: repeats }, () => arr).flat();
+};
+
+const allLogs = makeRepeated(dayOfLogs, 730);
+
+/*Testing*/
+app.get("/api/test", (req, res) => {
+  res.status(200).send(JSON.stringify({ logs: allLogs }));
+});
 
 /*--- API Auth Section ---*/
 app.post("/api/auth/loginadmin", async (req, res) => {
@@ -67,7 +120,7 @@ app.post("/api/auth/loginadmin", async (req, res) => {
   } catch (err) {
     console.log(err);
     res
-      .status(500)
+      .status(503)
       .send(JSON.stringify({ errorTxt: "Error accessing database" }));
   }
 });
