@@ -71,7 +71,7 @@ const dayOfLogs = [
     rank: "5",
     date: "05-09-2000 05:20:22Z",
     description:
-      "Today wasn't awful. Didn't do as much as I would have liked but thats alright. I think in the am my eyes felt kinda bad, like stuck to my eyelids I guess. Besides that though I'd say it was decent, didn't use the humidifier much during the day. Took my restasis at like 11 and 12. Also did my fish oil. Was super windy but thats about it",
+      "Today wasn't awul. Didn't do as much as I would have liked but thats alright. I think in the am my eyes felt kinda bad, like stuck to my eyelids I guess. Besides that though I'd say it was decent, didn't use the humidifier much during the day. Took my restasis at like 11 and 12. Also did my fish oil. Was super windy but thats about it",
   },
 ];
 
