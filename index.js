@@ -43,7 +43,7 @@ app.use(
       pool: pool,
       createTableIfMissing: true,
     }),
-    secret: "key that will sign the cookie, could be any random string",
+    secret: "key that will sign the cookie, could be any random  string",
     resave: false /*stops the session from being saved back to the store when no changes were made during the request*/,
     saveUninitialized: false /*doesn't save a cookie if we don't set anything on session*/,
     cookie: {
