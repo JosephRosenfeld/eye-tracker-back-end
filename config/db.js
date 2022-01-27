@@ -7,10 +7,7 @@ const pool = new pg.Pool({
   user: "postgres",
   password: process.env.PG_PWD,
   database: "eye_tracker_db",
-  host:
-    process.env.NODE_ENV == "development"
-      ? process.env.DEV_DB_HOST
-      : process.env.PROD_DB_HOST,
+  host: "mydatabase-instance.c3w4ub6w5czt.us-east-1.rds.amazonaws.com",
   port: 5432,
 });
 

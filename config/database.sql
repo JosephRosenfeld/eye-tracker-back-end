@@ -1,6 +1,12 @@
 CREATE DATABASE eye_tracker_db;
 
+
+/*--- Points to Remember ---*/
+--\l show all databases
 --\c into todo_database
+--\dt show all tables
+--All quotes should be single quotes for actual values
+
 
 /*Tables are listed in the order in which they should be created to avoid
 referencing yet to be created tables*/
@@ -98,4 +104,38 @@ INSERT INTO settings_obj (
 INSERT INTO person (full_name, email, pwd_encrypted, phone, settings_obj_id ) VALUES (
   'Joseph Rosenfeld', 'josephgrosenfeld@gmail.com', 
   'some encrypted pwd (wont be showing this in the source code)', '5406865236',
-  (SELECT settings_obj_id FROM settings_obj );
+  (SELECT settings_obj_id FROM settings_obj ));
+
+
+/*Testing Commands*/
+
+--Create a dummy log
+INSERT INTO log (log_type_id, log_datetime, rating, log_description, person_id) 
+  VALUES (
+    (SELECT log_type_id FROM log_type WHERE log_type_name='muro'),
+    '2016-06-22 19:10:25-07', NULL, NULL,
+    (SELECT person_id FROM person));
+
+--Create a years worth of dummy log data
+DO $$
+BEGIN
+FOR j IN 1..365 LOOP
+  FOR i IN 1..30 LOOP
+    INSERT INTO log (log_type_id, log_datetime, rating, log_description, person_id) 
+    VALUES (
+      (SELECT log_type_id FROM log_type WHERE log_type_name='muro'),
+      '2016-06-22 19:10:25-07', NULL, NULL,
+      (SELECT person_id FROM person));
+    END LOOP;
+  INSERT INTO log (log_type_id, log_datetime, rating, log_description, person_id) 
+    VALUES (
+      (SELECT log_type_id FROM log_type WHERE log_type_name='daily review'),
+      '2016-06-22 19:10:25-07',
+      '5',
+      'Was super windy but thats about it',
+      (SELECT person_id FROM person));
+  END LOOP;
+END; $$; 
+
+--Delete all logs from log table (for deleting the dummy data)
+DELETE FROM log;

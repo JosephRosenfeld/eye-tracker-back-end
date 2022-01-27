@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import compression from "compression";
 import session from "express-session";
-//import pool from "./config/db.js";
+import pool from "./config/db.js";
 import connectPgSimple from "connect-pg-simple";
 import bcrypt from "bcrypt";
 
@@ -17,78 +17,48 @@ const app = express();
 
 /*--- Middlewares ---*/
 //Need cors options since we're dealing with cookies
-app.use(cors(/*{ credentials: true, origin: "http://localhost:3000" }*/));
+//Need to add process.env
+var whitelist = [
+  process.env.NODE_ENV == "development"
+    ? process.env.DEV_API_URL
+    : process.env.PROD_API_URL,
+];
+var corsOptions = {
+  credentials: true,
+  origin: function (origin, callback) {
+    var originIsWhitelisted = whitelist.indexOf(origin) !== -1;
+    callback(null, originIsWhitelisted);
+  },
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(compression());
 app.use((req, res, next) => {
   res.set("Cache-Control", "no-store");
   next();
 });
-/*app.use(
+app.use(
   session({
     store: new pgSession({
       pool: pool,
       createTableIfMissing: true,
     }),
     secret: "key that will sign the cookie, could be any random string",
-    resave: false /*stops the session from being saved back to the store when no changes were made during the request*/ /*,
-    /*saveUninitialized: false /*doesn't save a cookie if we don't set anything on session*/ /*,
-    /*cookie: {
+    resave: false /*stops the session from being saved back to the store when no changes were made during the request*/,
+    saveUninitialized: false /*doesn't save a cookie if we don't set anything on session*/,
+    cookie: {
       maxAge: 1000 * 60 * 60 * 24,
       httpOnly: false,
-    } /*1000 miliseconds = second; 60 secs = 1min; 60 mins = 1hr; 24 hrs = 1d;*/ /*,
+    } /*1000 miliseconds = second; 60 secs = 1min; 60 mins = 1hr; 24 hrs = 1d;*/,
   })
-);*/
-
-const dayOfLogs = [
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  { type: "systane", date: "05-09-2000 05:20:22Z" },
-  {
-    type: "daily_review",
-    rank: "5",
-    date: "05-09-2000 05:20:22Z",
-    description:
-      "Today wasn't awul. Didn't do as much as I would have liked but thats alright. I think in the am my eyes felt kinda bad, like stuck to my eyelids I guess. Besides that though I'd say it was decent, didn't use the humidifier much during the day. Took my restasis at like 11 and 12. Also did my fish oil. Was super windy but thats about it",
-  },
-];
-
-const makeRepeated = (arr, repeats) => {
-  return Array.from({ length: repeats }, () => arr).flat();
-};
-
-const allLogs = makeRepeated(dayOfLogs, 1001);
+);
 
 /*Testing*/
-app.get("/api/test", (req, res) => {
+app.get("/api/test", async (req, res) => {
   console.log("we got hit");
-  res.status(200).send(JSON.stringify({ logs: allLogs }));
+  const logs = await pool.query("SELECT * FROM log");
+  console.log(logs.rows);
+  res.status(200).json({ logs: logs.rows });
 });
 
 app.get("/", (req, res) => {
@@ -96,13 +66,13 @@ app.get("/", (req, res) => {
   res.status(200).send(JSON.stringify({ test: "test" }));
 });
 
-/*--- API Auth Section ---*/ /*
+/*--- API Auth Section ---*/
 app.post("/api/auth/loginadmin", async (req, res) => {
   try {
     //get admin pwd from db
     const data = await pool.query(
       `SELECT pwd_encrypted FROM person WHERE email=$1`,
-      [process.env.ADMIN_EMAIL]
+      [process.env.ADMIN_EMAIL || "josephgrosenfeld@gmail.com"]
     );
     console.log(data);
     const adminPwdHash = data.rows[0].pwd_encrypted;
@@ -114,7 +84,7 @@ app.post("/api/auth/loginadmin", async (req, res) => {
       lib to store a cookie on the user. If the user already had a cookie from being
       logged in as a guest, then no worries and it should just overwrite the server 
       side specific session variable we're setting (in this case 'isAdmin and isGuest') 
-      and not change the actual client side cookie*/ /*
+      and not change the actual client side cookie*/
       req.session.user = {
         isAdmin: true,
         isGuest: false,
@@ -143,7 +113,7 @@ app.get("/api/auth/loginguest", (req, res) => {
   res.sendStatus(200);
 
   /*Some logic to copy all data from db on the only row item and then put it all
-  in the session storage*/ /*
+  in the session storage*/
 });
 
 app.get("/api/auth/logincheck", (req, res) => {
