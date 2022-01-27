@@ -132,7 +132,7 @@ FOR j IN 1..365 LOOP
       (SELECT log_type_id FROM log_type WHERE log_type_name='daily review'),
       '2016-06-22 19:10:25-07',
       '5',
-      'Was super windy but thats about it',
+      'Was super windy but thats about it. This morning my eyes did feel kinda funky though, and its like both eyes too, even though the erosion only occurs in my left eye, my right eye still gets super dry. Besides that I took the omega 3s and that was good. Ummm cant think of much anything else',
       (SELECT person_id FROM person));
   END LOOP;
 END; $$; 
