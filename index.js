@@ -8,6 +8,8 @@ import connectPgSimple from "connect-pg-simple";
 import bcrypt from "bcrypt";
 
 //comments for pushing changes asdfd
+console.log(process.env.NAME);
+console.log(process.env);
 
 //import logRoutes from "./routes/logRoutes";
 //import settingsRoutes from "./routes/settingsRoutes";
