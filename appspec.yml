@@ -16,7 +16,7 @@ hooks:
     - location: scripts/application_start.sh
       timeout: 300
       runas: ec2-user
-  AfterAllowTraffic:
+  ValidateService:
     - location: scripts/ngrok_logging.sh
       timeout: 300
       runas: ec2-user
