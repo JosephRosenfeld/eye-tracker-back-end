@@ -2,4 +2,4 @@
 
 #get log of ngrok urls
 sudo -i
-echo "test"
+curl http://localhost:5000/
