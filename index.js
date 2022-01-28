@@ -7,7 +7,7 @@ import pool from "./config/db.js";
 import connectPgSimple from "connect-pg-simple";
 import bcrypt from "bcrypt";
 
-//comments for pushing changes asd
+//comments for pushing changes a
 
 //import logRoutes from "./routes/logRoutes";
 //import settingsRoutes from "./routes/settingsRoutes";
