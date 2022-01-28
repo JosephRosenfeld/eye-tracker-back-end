@@ -1,7 +1,8 @@
 #!/bin/bash
 #Stopping existing ngrok and node servers
+#Have to make it conditional so the exit code doesn't crash the code deploy
 sudo -i
-echo "Stopping any existing servers (echo without stdout specified )" 
-pkill -9 node 
-pkill -9 ngrok 
+echo "Stopping any existing servers" 
+if pgrep node; then pkill -9 node; fi
+if pgrep ngrok; then pkill -9 ngrok; fi
 
