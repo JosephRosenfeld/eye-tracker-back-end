@@ -56,4 +56,4 @@ node index.js > app.out.log 2> app.err.log < /dev/null &
 
 #start ngrok in background (Its important to redirect outputs or else AWS will give you
 #a silent hang)
-ngrok http 5000 --log=stdout > ngrok.log 2> ngro.err.log &
+ngrok http 5000 > ngrok.log 2> ngrok.err.log < /dev/null &

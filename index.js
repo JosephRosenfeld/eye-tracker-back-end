@@ -7,10 +7,6 @@ import pool from "./config/db.js";
 import connectPgSimple from "connect-pg-simple";
 import bcrypt from "bcrypt";
 
-//comments for pushing changes asdfd
-console.log(process.env.NAME);
-console.log(process.env);
-
 //import logRoutes from "./routes/logRoutes";
 //import settingsRoutes from "./routes/settingsRoutes";
 
@@ -22,11 +18,7 @@ const app = express();
 /*--- Middlewares ---*/
 //Need cors options since we're dealing with cookies
 //Need to add process.env
-var whitelist = [
-  process.env.NODE_ENV == "development"
-    ? process.env.DEV_API_URL
-    : process.env.PROD_API_URL,
-];
+var whitelist = [process.env.API_URI];
 var corsOptions = {
   credentials: true,
   origin: function (origin, callback) {
