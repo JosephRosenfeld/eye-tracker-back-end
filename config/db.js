@@ -8,7 +8,7 @@ const pool = new pg.Pool({
   password: process.env.PG_PWD,
   database: "eye_tracker_db",
   host: process.env.DB_HOST,
-  port: 5432,
+  port: process.env.DB_PORT,
 });
 
 export default pool;

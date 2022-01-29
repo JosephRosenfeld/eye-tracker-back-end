@@ -46,8 +46,11 @@ app.use(
     saveUninitialized: false /*doesn't save a cookie if we don't set anything on session*/,
     cookie: {
       maxAge: 1000 * 60 * 60 * 24,
-      httpOnly: false,
-      sameSite: "none",
+      httpOnly: false /*allows js to access cookie*/,
+      /*sameSite and secure need to be enabled for production since the cookie and the 
+      client are different sites*/
+      sameSite: process.env.NODE_ENV == "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV == "production" ? true : false,
     } /*1000 miliseconds = second; 60 secs = 1min; 60 mins = 1hr; 24 hrs = 1d;*/,
   })
 );
