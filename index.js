@@ -47,6 +47,7 @@ app.use(
     cookie: {
       maxAge: 1000 * 60 * 60 * 24,
       httpOnly: false,
+      sameSite: "none",
     } /*1000 miliseconds = second; 60 secs = 1min; 60 mins = 1hr; 24 hrs = 1d;*/,
   })
 );
