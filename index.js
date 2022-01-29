@@ -7,8 +7,6 @@ import pool from "./config/db.js";
 import connectPgSimple from "connect-pg-simple";
 import bcrypt from "bcrypt";
 
-//tesdting
-
 //import logRoutes from "./routes/logRoutes";
 //import settingsRoutes from "./routes/settingsRoutes";
 
@@ -16,7 +14,6 @@ import bcrypt from "bcrypt";
 const pgSession = connectPgSimple(session);
 dotenv.config();
 const app = express();
-app.set("trust proxy", 1); // trust first proxy
 
 /*--- Middlewares ---*/
 //Need cors options since we're dealing with cookies
