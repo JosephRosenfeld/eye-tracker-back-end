@@ -139,3 +139,9 @@ END; $$;
 
 --Delete all logs from log table (for deleting the dummy data)
 DELETE FROM log;
+
+--Select a log with the proper log type listed
+SELECT log.log_id, log_type.log_type_name, log.log_datetime, log.rating, log.log_description 
+       FROM log
+       JOIN log_type
+            ON log_type.log_type_id = log.log_type_id;
