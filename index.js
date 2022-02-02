@@ -67,13 +67,11 @@ app.get("/", (req, res) => {
 app.post("/api/auth/loginadmin", async (req, res) => {
   try {
     //get admin pwd from db
-    const data = await pool.query(
+    const pwdQueryRes = await pool.query(
       `SELECT pwd_encrypted FROM person WHERE email=$1`,
       [process.env.ADMIN_EMAIL || "josephgrosenfeld@gmail.com"]
     );
-    console.log(data);
-    const adminPwdHash = data.rows[0].pwd_encrypted;
-    console.log(adminPwdHash);
+    const adminPwdHash = pwdQueryRes.rows[0].pwd_encrypted;
     //check hashed pwd for admin against sent pwd
     const match = await bcrypt.compare(req.body.pwd, adminPwdHash);
     if (match) {
@@ -86,7 +84,6 @@ app.post("/api/auth/loginadmin", async (req, res) => {
         isAdmin: true,
         isGuest: false,
       };
-      console.log(req.sessionID);
       res.status(200).json({ expires: req.session.cookie.expires });
     } else {
       //If pwd is invalid
@@ -103,7 +100,6 @@ app.get("/api/auth/loginguest", (req, res) => {
     isAdmin: false,
     isGuest: true,
   };
-  console.log(req.sessionID);
   res.status(200).json({ expires: req.session.cookie.expires });
 
   /*Some logic to copy all data from db on the only row item and then put it all
@@ -112,7 +108,6 @@ app.get("/api/auth/loginguest", (req, res) => {
 
 app.get("/api/auth/logincheck", (req, res) => {
   if (req.session.role) {
-    console.log("in req");
     res.status(200).json({ isAdmin: req.session.role.isAdmin });
   } else {
     res.status(401).json({ errorTxt: "Unauthorized" });
@@ -127,32 +122,32 @@ app.get("/api/data/logs", async (req, res) => {
     try {
       if (req.session.role.isGuest) {
         if (req.session.storage && req.session.storage.logs) {
-          console.log("existing session logs");
           res.status(200).json(req.session.storage.logs);
         } else {
-          console.log("creating new session logs");
           //No log stored in session so we return db settings
-          const logs = await pool.query(
-            "SELECT log.log_id, log_type.log_type_name, log.log_datetime, log.rating, log.log_description FROM log JOIN log_type ON log_type.log_type_id = log.log_type_id;"
+          const logsQueryRes = await pool.query(
+            `SELECT log.log_id, log_type.log_type_name, log.log_datetime, log.rating, log.log_description
+              FROM log 
+              JOIN log_type 
+                ON log_type.log_type_id = log.log_type_id;`
           );
-          res.status(200).json(logs.rows);
+          res.status(200).json(logsQueryRes.rows);
           //And then set settings on storage
           req.session.storage = {
             ...req.session.storage,
-            logs: logs.rows,
+            logs: logsQueryRes.rows,
           };
           req.session.save();
         }
       } else if (req.session.role.isAdmin) {
         //Admin send settings in the db
-        console.log("admin logs");
-        const logs = await pool.query(
+        const logsQueryRes = await pool.query(
           `SELECT log.log_id, log_type.log_type_name, log.log_datetime, log.rating, log.log_description
             FROM log 
             JOIN log_type 
               ON log_type.log_type_id = log.log_type_id;`
         );
-        res.status(200).json(logs.rows);
+        res.status(200).json(logsQueryRes.rows);
       }
     } catch (err) {
       console.log(err);
@@ -168,53 +163,40 @@ app.post("/api/data/logs", async (req, res) => {
   if (req.session.role) {
     console.log("in api/data/logs post (with session)");
     try {
-      //extract vars and format datetime
-      let { type, dt, time, rating = null, desc = null } = req.body;
-      dt = dt.substring(0, dt.indexOf("T"));
-      time = time.substring(time.indexOf("T"));
-
-      console.log(type, time, dt, rating, desc);
-      const dateTime = new Date(`${dt}${time}`).toISOString();
-      console.log(dateTime);
+      /*Create correctly formatted 'db' log object for both admin and guest routes
+      based on the request log which is formatted differently*/
+      const requestLog = req.body;
+      let dt = requestLog.dt.substring(0, requestLog.dt.indexOf("T"));
+      let time = requestLog.time.substring(requestLog.time.indexOf("T"));
+      const log = {
+        log_id: null,
+        log_type_name: requestLog.type,
+        log_datetime: new Date(`${dt}${time}`).toISOString(),
+        rating: requestLog.rating,
+        log_description: requestLog.desc,
+      };
       if (req.session.role.isGuest) {
-        console.log("guest");
-
-        //create log Id because no db to automatically do it
-        const logId =
-          1 + Math.max(...req.session.storage.logs.map((log) => log.log_id));
-        console.log(logId);
-
-        const log = {
-          log_id: logId,
-          log_type_name: type,
-          log_datetime: dateTime,
-          rating: rating,
-          log_description: desc,
-        };
+        //Create log Id because no db to automatically do it
+        log.log_id =
+          Math.max(...req.session.storage.logs.map((log) => log.log_id)) + 1;
+        //Store to session
         req.session.storage = {
           ...req.session.storage,
           logs: [...req.session.storage.logs, log],
         };
         res.status(201).json(log);
       } else if (req.session.role.isAdmin) {
-        console.log("admin logs");
-        console.log(type);
-        const log_id = await pool.query(
+        const logIdQueryRes = await pool.query(
           `INSERT INTO log (log_type_id, log_datetime, rating, log_description, person_id) 
             VALUES (
               (SELECT log_type_id FROM log_type WHERE log_type_name=$1),
               $2, $3, $4,
               (SELECT person_id FROM person))
             RETURNING log_id;`,
-          [type, dateTime, rating, desc]
+          [log.log_type_name, log.log_datetime, log.rating, log.log_description]
         );
-        res.status(201).json({
-          log_id: log_id.rows[0].log_id,
-          log_type_name: type,
-          log_datetime: dateTime,
-          rating: rating,
-          log_description: desc,
-        });
+        log.log_id = logIdQueryRes.rows[0].log_id;
+        res.status(201).json(log);
       }
     } catch (err) {
       console.log(err);
@@ -226,51 +208,155 @@ app.post("/api/data/logs", async (req, res) => {
 });
 
 //Update a log
-app.patch("/api/data/logs", async (req, res) => {
+app.patch("/api/data/logs/:id", async (req, res) => {
   if (req.session.role) {
-    console.log("in api/data/logs patch (with session)");
+    console.log("in api/data/logs/:id patch (with session)");
     try {
-      //extract vars and format datetime
-      let { logId, type, dt, time, rating = null, desc = null } = req.body;
-      dt = dt.substring(0, dt.indexOf("T"));
-      time = time.substring(time.indexOf("T"));
-      const dateTime = new Date(`${dt}${time}`).toISOString();
-      console.log(logId, type, dateTime, rating, desc);
+      /*Create correctly formatted 'db' log object for both admin and guest routes
+      based on the request log*/
+      const requestLog = req.body;
+      let dt = requestLog.dt.substring(0, requestLog.dt.indexOf("T"));
+      let time = requestLog.time.substring(requestLog.time.indexOf("T"));
+      const log = {
+        log_id: req.params.id,
+        log_type_name: requestLog.type,
+        log_datetime: new Date(`${dt}${time}`).toISOString(),
+        rating: requestLog.rating,
+        log_description: requestLog.desc,
+      };
       if (req.session.role.isGuest) {
-        console.log("guest");
-        const updatedLog = {
-          log_id: logId,
-          log_type_name: type,
-          log_datetime: dateTime,
-          rating: rating,
-          log_description: desc,
-        };
+        //Check if Id is valid
+        if (
+          !req.session.storage.logs.find(
+            (oldLog) => oldLog.log_id == log.log_id
+          )
+        ) {
+          throw new Error("Invalid Id");
+        }
+
+        //Store to session
         req.session.storage = {
           ...req.session.storage,
-          logs: req.session.storage.logs.map((log) =>
-            log.log_id == logId ? updatedLog : log
+          logs: req.session.storage.logs.map((oldLog) =>
+            oldLog.log_id == log.log_id ? log : oldLog
           ),
         };
-        res.status(201).json(updatedLog);
+        res.status(201).json(log);
       } else if (req.session.role.isAdmin) {
-        console.log("admin logs");
-        console.log(type);
-        const log_id = await pool.query(
-          `INSERT INTO log (log_type_id, log_datetime, rating, log_description, person_id) 
-            VALUES (
-              (SELECT log_type_id FROM log_type WHERE log_type_name=$1),
-              $2, $3, $4,
-              (SELECT person_id FROM person))
+        const updateLogQueryRes = await pool.query(
+          `UPDATE log 
+            SET
+              log_type_id = (SELECT log_type_id FROM log_type WHERE log_type_name=$2),
+              log_datetime = $3,
+              rating = $4,
+              log_description = $5
+            WHERE log_id = $1
             RETURNING log_id;`,
-          [type, dateTime, rating, desc]
+          [
+            log.log_id,
+            log.log_type_name,
+            log.log_datetime,
+            log.rating,
+            log.log_description,
+          ]
         );
-        res.status(201).json({
-          log_id: log_id.rows[0].log_id,
-          log_type_name: type,
-          log_datetime: dateTime,
-          rating: rating,
-          log_description: desc,
-        });
+
+        console.log(updateLogQueryRes);
+        //Check if valid Id
+        if (updateLogQueryRes.rowCount == 0) {
+          throw new Error("Invalid Id");
+        }
+
+        res.status(201).json(log);
+      }
+    } catch (err) {
+      console.log(err);
+      res.status(503).json({
+        errorTxt:
+          err.message == "Invalid Id"
+            ? err.message
+            : "Error accessing database",
+      });
+    }
+  } else {
+    res.status(401).json({ errorTxt: "Unauthorized" });
+  }
+});
+
+//Delete a log
+app.delete("/api/data/logs/:id", async (req, res) => {
+  if (req.session.role) {
+    console.log("in api/data/logs/:id delete (with session)");
+    try {
+      const { id } = req.params;
+      if (req.session.role.isGuest) {
+        //Check if id is valid
+        if (!req.session.storage.logs.find((oldLog) => oldLog.log_id == id)) {
+          throw new Error("Invalid Id");
+        }
+
+        //Delete from session
+        req.session.storage = {
+          ...req.session.storage,
+          logs: req.session.storage.logs.filter(
+            (oldLog) => oldLog.log_id != id
+          ),
+        };
+        res.status(202).json({ message: "deleted successfully" });
+      } else if (req.session.role.isAdmin) {
+        const deleteLogQueryRes = await pool.query(
+          `DELETE FROM log 
+            WHERE log_id = $1;`,
+          [id]
+        );
+
+        //Check if valid Id
+        if (deleteLogQueryRes.rowCount == 0) {
+          throw new Error("Invalid Id");
+        }
+        res.status(202).json({ message: "deleted successfully" });
+      }
+    } catch (err) {
+      console.log(err);
+      res.status(503).json({
+        errorTxt:
+          err.message == "Invalid Id"
+            ? err.message
+            : "Error accessing database",
+      });
+    }
+  } else {
+    res.status(401).json({ errorTxt: "Unauthorized" });
+  }
+});
+
+/*--- Settings Routes ---*/
+//Get settings
+app.get("/api/data/settings", async (req, res) => {
+  if (req.session.role) {
+    console.log("in api/data/settings get (with session)");
+    try {
+      if (req.session.role.isGuest) {
+        if (req.session.storage && req.session.storage.settings) {
+          res.status(200).json(req.session.storage.settings);
+        } else {
+          //No settings obj stored in session so we return db settings
+          const settingsQueryRes = await pool.query(
+            "SELECT * FROM settings_obj"
+          );
+          res.status(200).json(settingsQueryRes.rows[0]);
+          //And then set settings on storage
+          req.session.storage = {
+            ...req.session.storage,
+            settings: settingsQueryRes.rows[0],
+          };
+          //Have to save to storage manually because logic takes place after res is sent
+          req.session.save();
+        }
+      } else if (req.session.role.isAdmin) {
+        //Admin send settings in the db
+        const settingsQueryRes = await pool.query("SELECT * FROM settings_obj");
+        res.status(200).json(settingsQueryRes.rows[0]);
       }
     } catch (err) {
       console.log(err);
@@ -281,32 +367,26 @@ app.patch("/api/data/logs", async (req, res) => {
   }
 });
 
-/*--- Settings Routes ---*/
-app.get("/api/data/settings", async (req, res) => {
+//Update settings
+app.patch("/api/data/settings", async (req, res) => {
   if (req.session.role) {
-    console.log("in api/data/settings get (with session)");
+    console.log("in api/data/settings patch (with session)");
     try {
       if (req.session.role.isGuest) {
-        if (req.session.storage && req.session.storage.settings) {
-          console.log("existing session settings");
-          res.status(200).json(req.session.storage.settings);
-        } else {
-          console.log("creating new session settings");
-          //No settings obj stored in session so we return db settings
-          const settings_obj = await pool.query("SELECT * FROM settings_obj");
-          res.status(200).json(settings_obj.rows[0]);
-          //And then set settings on storage
-          req.session.storage = {
-            ...req.session.storage,
-            settings: settings_obj.rows[0],
-          };
-          req.session.save();
-        }
+        /*We don't perform any validation on if settings even exists on the session or if
+        the updated session storage is valid*/
+
+        //And then set settings on storage
+        req.session.storage = {
+          ...req.session.storage,
+          settings: settingsQueryRes.rows[0],
+        };
+        //Have to save to storage manually because logic takes place after res is sent
+        req.session.save();
       } else if (req.session.role.isAdmin) {
         //Admin send settings in the db
-        console.log("admin settings");
-        const settings_obj = await pool.query("SELECT * FROM settings_obj");
-        res.status(200).json(settings_obj.rows[0]);
+        const settingsQueryRes = await pool.query("SELECT * FROM settings_obj");
+        res.status(200).json(settingsQueryRes.rows[0]);
       }
     } catch (err) {
       console.log(err);

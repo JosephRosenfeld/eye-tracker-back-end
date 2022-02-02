@@ -112,7 +112,7 @@ INSERT INTO person (full_name, email, pwd_encrypted, phone, settings_obj_id ) VA
 --Create a dummy log
 INSERT INTO log (log_type_id, log_datetime, rating, log_description, person_id) 
   VALUES (
-    (SELECT log_type_id FROM log_type WHERE log_type_name='muro'),
+    (SELECT log_type_id FROM log_type WHERE log_type_name='Muro Eye Drop'),
     '2016-06-22 19:10:25-07', NULL, NULL,
     (SELECT person_id FROM person));
 
@@ -142,6 +142,24 @@ DELETE FROM log;
 
 --Select a log with the proper log type listed
 SELECT log.log_id, log_type.log_type_name, log.log_datetime, log.rating, log.log_description 
-       FROM log
-       JOIN log_type
-            ON log_type.log_type_id = log.log_type_id;
+  FROM log
+  JOIN log_type
+    ON log_type.log_type_id = log.log_type_id;
+
+--Update a specific log based on id
+UPDATE log
+SET 
+  log_type_id = (SELECT log_type_id FROM log_type WHERE log_type_name=$logType),
+  log_datetime = $logDatetime
+  rating = $rating
+  log_description = $logDesc,
+WHERE log_id = $logId;
+
+--Example of updating a specific log with placeholders filled in
+UPDATE log
+SET 
+  log_type_id = (SELECT log_type_id FROM log_type WHERE log_type_name='Muro Eye Drop'),
+  log_datetime = '2022-02-02T13:12:49.666Z',
+  rating = '5',
+  log_description = 'This is a test description'
+WHERE log_id = 22655;
