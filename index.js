@@ -169,48 +169,108 @@ app.post("/api/data/logs", async (req, res) => {
     console.log("in api/data/logs post (with session)");
     try {
       //extract vars and format datetime
-      const {
-        type,
-        date,
-        time,
-        rating = null,
-        description = null,
-      } = req.body.newLog;
-      const dateTime = new Date(`${date}${time}`).toISOString();
-      console.log(type, date, time, rating, description, dateTime);
+      let { type, dt, time, rating = null, desc = null } = req.body;
+      dt = dt.substring(0, dt.indexOf("T"));
+      time = time.substring(time.indexOf("T"));
+
+      console.log(type, time, dt, rating, desc);
+      const dateTime = new Date(`${dt}${time}`).toISOString();
+      console.log(dateTime);
       if (req.session.role.isGuest) {
         console.log("guest");
 
-        //creat log Id because no db to automatically do it
-        const logId = Math.max(
-          ...req.session.storage.logs.map((log) => log.log_id)
-        );
+        //create log Id because no db to automatically do it
+        const logId =
+          1 + Math.max(...req.session.storage.logs.map((log) => log.log_id));
         console.log(logId);
+
+        const log = {
+          log_id: logId,
+          log_type_name: type,
+          log_datetime: dateTime,
+          rating: rating,
+          log_description: desc,
+        };
         req.session.storage = {
           ...req.session.storage,
-          logs: [
-            ...req.session.storage.logs,
-            {
-              log_id: logId,
-              log_type_name: type,
-              log_datetime: dateTime,
-              rating: rating,
-              log_description: description,
-            },
-          ],
+          logs: [...req.session.storage.logs, log],
         };
-        res.status(201).json(logs.rows);
+        res.status(201).json(log);
       } else if (req.session.role.isAdmin) {
         console.log("admin logs");
-        const logs = await pool.query(
+        console.log(type);
+        const log_id = await pool.query(
           `INSERT INTO log (log_type_id, log_datetime, rating, log_description, person_id) 
             VALUES (
               (SELECT log_type_id FROM log_type WHERE log_type_name=$1),
               $2, $3, $4,
-              (SELECT person_id FROM person));`,
-          [type, dateTime, rating, description]
+              (SELECT person_id FROM person))
+            RETURNING log_id;`,
+          [type, dateTime, rating, desc]
         );
-        res.status(201).json(logs.rows);
+        res.status(201).json({
+          log_id: log_id.rows[0].log_id,
+          log_type_name: type,
+          log_datetime: dateTime,
+          rating: rating,
+          log_description: desc,
+        });
+      }
+    } catch (err) {
+      console.log(err);
+      res.status(503).json({ errorTxt: "Error accessing database" });
+    }
+  } else {
+    res.status(401).json({ errorTxt: "Unauthorized" });
+  }
+});
+
+//Update a log
+app.patch("/api/data/logs", async (req, res) => {
+  if (req.session.role) {
+    console.log("in api/data/logs patch (with session)");
+    try {
+      //extract vars and format datetime
+      let { logId, type, dt, time, rating = null, desc = null } = req.body;
+      dt = dt.substring(0, dt.indexOf("T"));
+      time = time.substring(time.indexOf("T"));
+      const dateTime = new Date(`${dt}${time}`).toISOString();
+      console.log(logId, type, dateTime, rating, desc);
+      if (req.session.role.isGuest) {
+        console.log("guest");
+        const updatedLog = {
+          log_id: logId,
+          log_type_name: type,
+          log_datetime: dateTime,
+          rating: rating,
+          log_description: desc,
+        };
+        req.session.storage = {
+          ...req.session.storage,
+          logs: req.session.storage.logs.map((log) =>
+            log.log_id == logId ? updatedLog : log
+          ),
+        };
+        res.status(201).json(updatedLog);
+      } else if (req.session.role.isAdmin) {
+        console.log("admin logs");
+        console.log(type);
+        const log_id = await pool.query(
+          `INSERT INTO log (log_type_id, log_datetime, rating, log_description, person_id) 
+            VALUES (
+              (SELECT log_type_id FROM log_type WHERE log_type_name=$1),
+              $2, $3, $4,
+              (SELECT person_id FROM person))
+            RETURNING log_id;`,
+          [type, dateTime, rating, desc]
+        );
+        res.status(201).json({
+          log_id: log_id.rows[0].log_id,
+          log_type_name: type,
+          log_datetime: dateTime,
+          rating: rating,
+          log_description: desc,
+        });
       }
     } catch (err) {
       console.log(err);
