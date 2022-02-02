@@ -241,7 +241,7 @@ app.patch("/api/data/logs/:id", async (req, res) => {
             oldLog.log_id == log.log_id ? log : oldLog
           ),
         };
-        res.status(201).json(log);
+        res.status(200).json(log);
       } else if (req.session.role.isAdmin) {
         const updateLogQueryRes = await pool.query(
           `UPDATE log 
@@ -267,7 +267,7 @@ app.patch("/api/data/logs/:id", async (req, res) => {
           throw new Error("Invalid Id");
         }
 
-        res.status(201).json(log);
+        res.status(200).json(log);
       }
     } catch (err) {
       console.log(err);
@@ -302,7 +302,7 @@ app.delete("/api/data/logs/:id", async (req, res) => {
             (oldLog) => oldLog.log_id != id
           ),
         };
-        res.status(202).json({ message: "deleted successfully" });
+        res.status(200).json({ message: "deleted successfully" });
       } else if (req.session.role.isAdmin) {
         const deleteLogQueryRes = await pool.query(
           `DELETE FROM log 
@@ -314,7 +314,7 @@ app.delete("/api/data/logs/:id", async (req, res) => {
         if (deleteLogQueryRes.rowCount == 0) {
           throw new Error("Invalid Id");
         }
-        res.status(202).json({ message: "deleted successfully" });
+        res.status(200).json({ message: "deleted successfully" });
       }
     } catch (err) {
       console.log(err);
@@ -344,6 +344,9 @@ app.get("/api/data/settings", async (req, res) => {
           const settingsQueryRes = await pool.query(
             "SELECT * FROM settings_obj"
           );
+          //remove the settings_obj_i
+          delete settingsQueryRes.rows[0].settings_obj_id;
+
           res.status(200).json(settingsQueryRes.rows[0]);
           //And then set settings on storage
           req.session.storage = {
@@ -372,21 +375,65 @@ app.patch("/api/data/settings", async (req, res) => {
   if (req.session.role) {
     console.log("in api/data/settings patch (with session)");
     try {
+      //Logic applicable to both guest and admin route
+      const settingsObj = req.body;
       if (req.session.role.isGuest) {
         /*We don't perform any validation on if settings even exists on the session or if
         the updated session storage is valid*/
 
-        //And then set settings on storage
+        //Set new settings on storage
         req.session.storage = {
           ...req.session.storage,
-          settings: settingsQueryRes.rows[0],
+          settings: settingsObj,
         };
-        //Have to save to storage manually because logic takes place after res is sent
-        req.session.save();
+
+        /*We still send back recieved settings obj just to make it standardized. 
+        Whatever the server responds with is what our action will send to the reducer*/
+        res.status(200).json(settingsObj);
       } else if (req.session.role.isAdmin) {
         //Admin send settings in the db
-        const settingsQueryRes = await pool.query("SELECT * FROM settings_obj");
-        res.status(200).json(settingsQueryRes.rows[0]);
+        const settingsQueryRes = await pool.query(
+          `UPDATE settings_obj 
+            SET
+              systane_abbreviation = $1,
+              muro_abbreviation = $2,
+              muro_ointment_abbreviation = $3,
+              erosion_abbreviation = $4,
+              note_abbreviation = $5,
+              daily_review_abbreviation = $6,
+              systane_color = $7,
+              muro_color = $8,
+              muro_ointment_color = $9,
+              erosion_color = $10,
+              note_color = $11,
+              daily_review1_color = $12,
+              daily_review2_color = $13,
+              daily_review3_color = $14,
+              daily_review4_color = $15,
+              daily_review5_color = $16
+            WHERE
+              settings_obj_id = (SELECT settings_obj_id FROM settings_obj);`,
+          [
+            settingsObj.systane_abbreviation,
+            settingsObj.muro_abbreviation,
+            settingsObj.muro_ointment_abbreviation,
+            settingsObj.erosion_abbreviation,
+            settingsObj.note_abbreviation,
+            settingsObj.daily_review_abbreviation,
+            settingsObj.systane_color,
+            settingsObj.muro_color,
+            settingsObj.muro_ointment_color,
+            settingsObj.erosion_color,
+            settingsObj.note_color,
+            settingsObj.daily_review1_color,
+            settingsObj.daily_review2_color,
+            settingsObj.daily_review3_color,
+            settingsObj.daily_review4_color,
+            settingsObj.daily_review5_color,
+          ]
+        );
+        console.log(settingsQueryRes);
+        res.status(200).json(settingsObj);
       }
     } catch (err) {
       console.log(err);
