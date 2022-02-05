@@ -14,6 +14,7 @@ const ngrokUrl = await ngrok.connect({
   addr: "5000",
 });
 console.log(ngrokUrl);
+const ngrokDomain = ngrokUrl.substring(8);
 
 //initialization and initial configs
 const pgSession = connectPgSimple(session);
@@ -56,6 +57,7 @@ app.use(
       client are different sites*/
       sameSite: process.env.NODE_ENV == "production" ? "none" : "lax",
       secure: process.env.NODE_ENV == "production" ? true : false,
+      domain: ngrokDomain,
     },
   })
 );
