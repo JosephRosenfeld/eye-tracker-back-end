@@ -56,7 +56,6 @@ app.use(
       client are different sites*/
       sameSite: process.env.NODE_ENV == "production" ? "none" : "lax",
       secure: process.env.NODE_ENV == "production" ? true : false,
-      domain: ngrokUrl,
     },
   })
 );
