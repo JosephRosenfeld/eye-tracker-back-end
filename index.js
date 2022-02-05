@@ -30,10 +30,10 @@ var corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(compression());
-app.use((req, res, next) => {
-  res.set("Cache-Control", "no-store");
-  next();
-});
+// app.use((req, res, next) => {
+//   res.set("Cache-Control", "no-store");
+//   next();
+// });
 app.use(
   session({
     store: new pgSession({
@@ -55,12 +55,8 @@ app.use(
 );
 
 app.get("/", (req, res) => {
-  console.log("we got hit at root");
-  req.session.storage = {
-    test: "test",
-  };
+  console.log("we got hit at root ", new Date());
   res.status(200).json({ message: "at root" });
-  console.log(req.session);
 });
 
 /*--- API Auth Section ---*/
@@ -118,7 +114,7 @@ app.get("/api/auth/logincheck", (req, res) => {
 //Get all logs
 app.get("/api/data/logs", async (req, res) => {
   if (req.session.role) {
-    console.log("in api/data/logs get (with session)");
+    console.log("in api/data/logs get (with session)", new Date());
     try {
       if (req.session.role.isGuest) {
         if (req.session.storage && req.session.storage.logs) {
@@ -161,7 +157,7 @@ app.get("/api/data/logs", async (req, res) => {
 //Create a log
 app.post("/api/data/logs", async (req, res) => {
   if (req.session.role) {
-    console.log("in api/data/logs post (with session)");
+    console.log("in api/data/logs post (with session)", new Date());
     try {
       /*Create correctly formatted 'db' log object for both admin and guest routes
       based on the request log which is formatted differently*/
@@ -210,7 +206,7 @@ app.post("/api/data/logs", async (req, res) => {
 //Update a log
 app.patch("/api/data/logs/:id", async (req, res) => {
   if (req.session.role) {
-    console.log("in api/data/logs/:id patch (with session)");
+    console.log("in api/data/logs/:id patch (with session)", new Date());
     try {
       /*Create correctly formatted 'db' log object for both admin and guest routes
       based on the request log*/
@@ -261,7 +257,6 @@ app.patch("/api/data/logs/:id", async (req, res) => {
           ]
         );
 
-        console.log(updateLogQueryRes);
         //Check if valid Id
         if (updateLogQueryRes.rowCount == 0) {
           throw new Error("Invalid Id");
@@ -286,7 +281,7 @@ app.patch("/api/data/logs/:id", async (req, res) => {
 //Delete a log
 app.delete("/api/data/logs/:id", async (req, res) => {
   if (req.session.role) {
-    console.log("in api/data/logs/:id delete (with session)");
+    console.log("in api/data/logs/:id delete (with session)", new Date());
     try {
       const { id } = req.params;
       if (req.session.role.isGuest) {
@@ -334,7 +329,7 @@ app.delete("/api/data/logs/:id", async (req, res) => {
 //Get settings
 app.get("/api/data/settings", async (req, res) => {
   if (req.session.role) {
-    console.log("in api/data/settings get (with session)");
+    console.log("in api/data/settings get (with session)", new Date());
     try {
       if (req.session.role.isGuest) {
         if (req.session.storage && req.session.storage.settings) {
@@ -373,7 +368,7 @@ app.get("/api/data/settings", async (req, res) => {
 //Update settings
 app.patch("/api/data/settings", async (req, res) => {
   if (req.session.role) {
-    console.log("in api/data/settings patch (with session)");
+    console.log("in api/data/settings patch (with session)", new Date());
     try {
       //Logic applicable to both guest and admin route
       const settingsObj = req.body;
@@ -432,7 +427,6 @@ app.patch("/api/data/settings", async (req, res) => {
             settingsObj.daily_review5_color,
           ]
         );
-        console.log(settingsQueryRes);
         res.status(200).json(settingsObj);
       }
     } catch (err) {

@@ -117,6 +117,8 @@ INSERT INTO log (log_type_id, log_datetime, rating, log_description, person_id)
     (SELECT person_id FROM person));
 
 --Create a years worth of dummy log data
+  /*Data has 30 muro drops and 1 daily review always at the same time, 
+  repeated 365 times*/
 DO $$
 BEGIN
 FOR j IN 1..365 LOOP
@@ -135,7 +137,28 @@ FOR j IN 1..365 LOOP
       'Was super windy but thats about it. This morning my eyes did feel kinda funky though, and its like both eyes too, even though the erosion only occurs in my left eye, my right eye still gets super dry. Besides that I took the omega 3s and that was good. Ummm cant think of much anything else',
       (SELECT person_id FROM person));
   END LOOP;
-END; $$; 
+END; 
+$$; 
+
+--Create a years worth of dummy log data
+  /*Data has a daily review for each seperate day and a random rating*/
+DO $$
+DECLARE 
+  log_date DATE := '2021-01-01' ;
+BEGIN
+FOR j IN 1..20 LOOP
+  --1 daily review
+  INSERT INTO log (log_type_id, log_datetime, rating, log_description, person_id) 
+    VALUES (
+      (SELECT log_type_id FROM log_type WHERE log_type_name='Daily Review'),
+      log_date,
+      (SELECT floor(random()*(5))+1),
+      'Was super windy but thats about it. This morning my eyes did feel kinda funky though, and its like both eyes too, even though the erosion only occurs in my left eye, my right eye still gets super dry. Besides that I took the omega 3s and that was good. Ummm cant think of much anything else',
+      (SELECT person_id FROM person));
+  log_date = log_date + 1;
+  END LOOP;
+END; 
+$$; 
 
 --Delete all logs from log table (for deleting the dummy data)
 DELETE FROM log;
@@ -163,3 +186,9 @@ SET
   rating = '5',
   log_description = 'This is a test description'
 WHERE log_id = 22655;
+
+--Get number of logs
+SELECT 
+   COUNT(*) 
+FROM 
+   log
