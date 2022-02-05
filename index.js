@@ -8,13 +8,12 @@ import connectPgSimple from "connect-pg-simple";
 import bcrypt from "bcrypt";
 import ngrok from "ngrok";
 
-console.log("before call");
+//Get proxy ngrok url for https
 const ngrokUrl = await ngrok.connect({
   proto: "http",
   addr: "5000",
 });
 console.log(ngrokUrl);
-console.log("after call");
 
 //initialization and initial configs
 const pgSession = connectPgSimple(session);
@@ -57,7 +56,7 @@ app.use(
       client are different sites*/
       sameSite: process.env.NODE_ENV == "production" ? "none" : "lax",
       secure: process.env.NODE_ENV == "production" ? true : false,
-      domain: process.env.API_URI,
+      domain: ngrokUrl,
     },
   })
 );

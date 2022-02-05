@@ -49,8 +49,8 @@ export NVM_DIR="$HOME/.nvm"
 #install node modules
 npm install
 
+#install ngrok specifically
 npm i ngrok
-
 
 #start our node app in the background
 node index.js > app.out.log 2> app.err.log < /dev/null & 
