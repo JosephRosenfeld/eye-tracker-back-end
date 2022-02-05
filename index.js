@@ -6,9 +6,15 @@ import session from "express-session";
 import pool from "./config/db.js";
 import connectPgSimple from "connect-pg-simple";
 import bcrypt from "bcrypt";
+import ngrok from "ngrok";
+import ngrok from "ngrok";
 
-//import logRoutes from "./routes/logRoutes";
-//import settingsRoutes from "./routes/settingsRoutes";
+console.log("before call");
+const ngrokUrl = await ngrok.connect({
+  proto: "http",
+  addr: "5000",
+});
+console.log("after call");
 
 //initialization and initial configs
 const pgSession = connectPgSimple(session);

@@ -18,8 +18,7 @@
     "nodemon": "^2.0.15"
   },
   "scripts": {
-    "start": "nodemon index.js",
-    "custom_start": "node custom_start.js"
+    "start": "nodemon index.js"
   },
   "keywords": [],
   "author": "",
