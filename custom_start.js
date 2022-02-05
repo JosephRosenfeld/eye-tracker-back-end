@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+const ngrok = require("ngrok");
+
 ngrok
   .connect({
     proto: "http",
