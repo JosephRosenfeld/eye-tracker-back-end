@@ -7,13 +7,13 @@ import pool from "./config/db.js";
 import connectPgSimple from "connect-pg-simple";
 import bcrypt from "bcrypt";
 import ngrok from "ngrok";
-import ngrok from "ngrok";
 
 console.log("before call");
 const ngrokUrl = await ngrok.connect({
   proto: "http",
   addr: "5000",
 });
+console.log(ngrokUrl);
 console.log("after call");
 
 //initialization and initial configs
