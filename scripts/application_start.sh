@@ -49,6 +49,7 @@ export NVM_DIR="$HOME/.nvm"
 #install node modules
 npm install
 
+npm i ngrok
 
 
 #start our node app in the background
