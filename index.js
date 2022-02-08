@@ -16,7 +16,7 @@ app.set("trust proxy", 1); // trust first proxy
 /*--- Middlewares ---*/
 //Need cors options since we're dealing with cookies
 //Need to add process.env
-var whitelist = [process.env.API_URI];
+var whitelist = [process.env.SITE_URI];
 var corsOptions = {
   credentials: true,
   origin: function (origin, callback) {
