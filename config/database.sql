@@ -2,10 +2,16 @@ CREATE DATABASE eye_tracker_db;
 
 
 /*--- Points to Remember ---*/
---\l show all databases
---\c into todo_database
---\dt show all tables
---All quotes should be single quotes for actual values
+  --\l show all databases
+  --\c into todo_database
+  --\dt show all tables
+  --All quotes should be single quotes for actual values
+  /*By using the full Olsen style time-zone name 'America/New_York' you not only specify
+  the time zone, but also that it should adhere to daylight savings time*/
+    --Ex:
+    --varDtTime TIMESTAMPTZ := '2020-10-23 07:30 America/New_York';
+  --Source: https://stackoverflow.com/questions/10383108/time-zone-with-daylight-savings-times-in-postgresql
+
 
 
 /*Tables are listed in the order in which they should be created to avoid
@@ -140,23 +146,105 @@ FOR j IN 1..365 LOOP
 END; 
 $$; 
 
---Create a years worth of dummy log data
-  /*Data has a daily review for each seperate day and a random rating*/
+--Create all dummy log data
+  /*Data has:
+  - 1 am note
+  - 16 systane eye drops each hour
+  - 3 muro eye drops every four hours
+  - 1 muro ointement at 10:30pm
+  - 1 daily review at 10:30pm
+  Additionally, all logs are inserted in a window format with the actual time being
+  a random selection within this 'window'*/
+
 DO $$
 DECLARE 
-  log_date DATE := '2021-01-01' ;
+  varDtTime TIMESTAMPTZ := '2020-10-23 07:30 America/New_York';
+  seconds_variance INT := 3600;
+
 BEGIN
-FOR j IN 1..20 LOOP
+FOR i IN 1..480 LOOP
+
+  /*raise notice 'dtTime: %', varDtTime;*/
+
+  --1 Note
+  varDtTime = varDtTime - (1 || ' hour')::INTERVAL; --offset half of variance
+  INSERT INTO log (log_type_id, log_datetime, rating, log_description, person_id) 
+    VALUES (
+      (SELECT log_type_id FROM log_type WHERE log_type_name='Note'),
+      varDtTime + ((SELECT floor(random()*(seconds_variance * 2))) || ' second')::INTERVAL,
+      null,
+      'Eye''s feel a little dry but nothing too bad. Slept with the humidifier on all night so that helped.',
+      (SELECT person_id FROM person));
+  varDtTime = varDtTime + (1 || ' hour')::INTERVAL; --remove variance offset
+
+  --16 Systane Drops (1 per hour of 7:30am-10:30pm day (plus .75 hr variance))
+  varDtTime = varDtTime - (.375 || ' hour')::INTERVAL; --offset half of variance
+  FOR j IN 1..16 LOOP
+    INSERT INTO log (log_type_id, log_datetime, rating, log_description, person_id)   
+      VALUES (
+        (SELECT log_type_id FROM log_type WHERE log_type_name='Systane Eye Drop'),
+        varDtTime + ((SELECT floor(random()*(seconds_variance * .75))) || ' second')::INTERVAL,
+        null,
+        null,
+        (SELECT person_id FROM person));
+    varDtTime = varDtTime + (1 || ' hour')::INTERVAL;
+  END LOOP;
+  varDtTime = varDtTime + (.375 || ' hour')::INTERVAL; --remove variance offset
+
+  -- raise notice 'dtTime: %', varDtTime;
+  varDtTime = varDtTime - (16 || ' hour')::INTERVAL; --Set to 7:30am
+  -- raise notice 'dtTime: %', varDtTime;
+
+  --3 Muro Drops (1 every 4 hours starting at 11am (with a 1 hour variance))
+  varDtTime = varDtTime + (3.5 || ' hour')::INTERVAL; --Set to 11:00am
+  varDtTime = varDtTime - (.5 || ' hour')::INTERVAL; --offset half of variance
+  FOR j IN 1..3 LOOP
+    INSERT INTO log (log_type_id, log_datetime, rating, log_description, person_id)   
+      VALUES (
+        (SELECT log_type_id FROM log_type WHERE log_type_name='Muro Eye Drop'),
+        varDtTime + ((SELECT floor(random()*(seconds_variance * 1))) || ' second')::INTERVAL,
+        null,
+        null,
+        (SELECT person_id FROM person));
+    
+    varDtTime = varDtTime + (4 || ' hour')::INTERVAL;
+  END LOOP;
+  varDtTime = varDtTime + (.5 || ' hour')::INTERVAL; --remove variance offset
+
+
+  -- raise notice 'dtTime: %', varDtTime;
+  varDtTime = varDtTime - (15.5 || ' hour')::INTERVAL; --Set to 7:30am
+  -- raise notice 'dtTime: %', varDtTime;
+
+  --1 Muro Ointment
+  varDtTime = varDtTime + (15 || ' hour')::INTERVAL; --Set to 10:30pm
+  varDtTime = varDtTime - (1 || ' hour')::INTERVAL; --offset half of variance
+  INSERT INTO log (log_type_id, log_datetime, rating, log_description, person_id)   
+      VALUES (
+        (SELECT log_type_id FROM log_type WHERE log_type_name='Muro Ointment'),
+        varDtTime + ((SELECT floor(random()*(seconds_variance * 2))) || ' second')::INTERVAL,
+        null,
+        null,
+        (SELECT person_id FROM person));
+  varDtTime = varDtTime + (1 || ' hour')::INTERVAL; --remove variance offset
+
   --1 daily review
+  varDtTime = varDtTime - (.75 || ' hour')::INTERVAL; --offset half of variance
   INSERT INTO log (log_type_id, log_datetime, rating, log_description, person_id) 
     VALUES (
       (SELECT log_type_id FROM log_type WHERE log_type_name='Daily Review'),
-      log_date,
+      varDtTime + ((SELECT floor(random()*(seconds_variance * 1.5))) || ' second')::INTERVAL,
       (SELECT floor(random()*(5))+1),
-      'Was super windy but thats about it. This morning my eyes did feel kinda funky though, and its like both eyes too, even though the erosion only occurs in my left eye, my right eye still gets super dry. Besides that I took the omega 3s and that was good. Ummm cant think of much anything else',
+      'Was a super windy day today and my eyes definitely felt a little dry at times. I tried to avoid going outside too much though so that helped. Another thing that probably didn''t do any favors was the fact that I was on my laptop most of the day working. Besides that I also hydrated a lot today and took my omega 3''s.',
       (SELECT person_id FROM person));
-  log_date = log_date + 1;
-  END LOOP;
+  varDtTime = varDtTime + (.75 || ' hour')::INTERVAL; --remove variance offset
+
+  --Rewind to 7:30am, then increment by a day, then correct for day light saving issues
+  varDtTime = varDtTime - (15 || ' hour')::INTERVAL; --Set to 7:30am
+  varDtTime = varDtTime + interval '1 day'; 
+  --Deconstruct date and remake it to avoid time zone issues
+  -- varDtTime = make_timestamptz(extract(year from varDtTime)::INT, extract(month from varDtTime)::INT, extract(day from varDtTime)::INT, 7, 30, 0.0, 'est');
+END LOOP;
 END; 
 $$; 
 
@@ -188,7 +276,4 @@ SET
 WHERE log_id = 22655;
 
 --Get number of logs
-SELECT 
-   COUNT(*) 
-FROM 
-   log
+SELECT COUNT(*) FROM log
