@@ -6,15 +6,6 @@ import session from "express-session";
 import pool from "./config/db.js";
 import connectPgSimple from "connect-pg-simple";
 import bcrypt from "bcrypt";
-import ngrok from "ngrok";
-
-//Get proxy ngrok url for https
-const ngrokUrl = await ngrok.connect({
-  proto: "http",
-  addr: "5000",
-});
-console.log(ngrokUrl);
-const ngrokDomain = ngrokUrl.substring(8);
 
 //initialization and initial configs
 const pgSession = connectPgSimple(session);
@@ -55,9 +46,9 @@ app.use(
       httpOnly: false /*allows js to access cookie*/,
       /*sameSite and secure need to be enabled for production since the cookie and the 
       client are different sites*/
-      sameSite: process.env.NODE_ENV == "production" ? "none" : "lax",
-      secure: process.env.NODE_ENV == "production" ? true : false,
-      domain: ngrokDomain,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production" ? true : false,
+      // domain: ngrokDomain,
     },
   })
 );
@@ -181,8 +172,14 @@ app.post("/api/data/logs", async (req, res) => {
       };
       if (req.session.role.isGuest) {
         //Create log Id because no db to automatically do it
+        /*Make sure you are storing log Id as a string because even though the 
+        database type on the primary key is BIGSERIAL (which should be an integer),
+        the db queries with the pg package returns it as a string and therefore the 
+        redux store on the front end will store it as string*/
         log.log_id =
-          Math.max(...req.session.storage.logs.map((log) => log.log_id)) + 1;
+          Math.max(...req.session.storage.logs.map((log) => log.log_id)) + 1 ||
+          0;
+        log.log_id = log.log_id.toString(); //Convert to string
         //Store to session
         req.session.storage = {
           ...req.session.storage,
@@ -232,7 +229,7 @@ app.patch("/api/data/logs/:id", async (req, res) => {
         //Check if Id is valid
         if (
           !req.session.storage.logs.find(
-            (oldLog) => oldLog.log_id == log.log_id
+            (oldLog) => oldLog.log_id === log.log_id
           )
         ) {
           throw new Error("Invalid Id");
@@ -242,7 +239,7 @@ app.patch("/api/data/logs/:id", async (req, res) => {
         req.session.storage = {
           ...req.session.storage,
           logs: req.session.storage.logs.map((oldLog) =>
-            oldLog.log_id == log.log_id ? log : oldLog
+            oldLog.log_id === log.log_id ? log : oldLog
           ),
         };
         res.status(200).json(log);
@@ -266,7 +263,7 @@ app.patch("/api/data/logs/:id", async (req, res) => {
         );
 
         //Check if valid Id
-        if (updateLogQueryRes.rowCount == 0) {
+        if (updateLogQueryRes.rowCount === 0) {
           throw new Error("Invalid Id");
         }
 
@@ -276,7 +273,7 @@ app.patch("/api/data/logs/:id", async (req, res) => {
       console.log(err);
       res.status(503).json({
         errorTxt:
-          err.message == "Invalid Id"
+          err.message === "Invalid Id"
             ? err.message
             : "Error accessing database",
       });
@@ -294,7 +291,7 @@ app.delete("/api/data/logs/:id", async (req, res) => {
       const { id } = req.params;
       if (req.session.role.isGuest) {
         //Check if id is valid
-        if (!req.session.storage.logs.find((oldLog) => oldLog.log_id == id)) {
+        if (!req.session.storage.logs.find((oldLog) => oldLog.log_id === id)) {
           throw new Error("Invalid Id");
         }
 
@@ -314,7 +311,7 @@ app.delete("/api/data/logs/:id", async (req, res) => {
         );
 
         //Check if valid Id
-        if (deleteLogQueryRes.rowCount == 0) {
+        if (deleteLogQueryRes.rowCount === 0) {
           throw new Error("Invalid Id");
         }
         res.status(200).json({ message: "deleted successfully" });
@@ -323,7 +320,7 @@ app.delete("/api/data/logs/:id", async (req, res) => {
       console.log(err);
       res.status(503).json({
         errorTxt:
-          err.message == "Invalid Id"
+          err.message === "Invalid Id"
             ? err.message
             : "Error accessing database",
       });

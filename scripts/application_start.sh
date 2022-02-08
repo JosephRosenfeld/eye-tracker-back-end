@@ -49,9 +49,9 @@ export NVM_DIR="$HOME/.nvm"
 #install node modules
 npm install
 
-#install ngrok specifically
-npm i ngrok
-
 #start our node app in the background
 node index.js > app.out.log 2> app.err.log < /dev/null & 
+
+#install ngrok specifically
+ngrok http --region=us --hostname=api.theeyetracker.app 5000 > ngrok.out.log 2> ngrok.err.log < /dev/null & 
 
