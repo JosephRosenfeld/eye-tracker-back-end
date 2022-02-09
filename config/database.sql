@@ -162,7 +162,7 @@ DECLARE
   seconds_variance INT := 3600;
 
 BEGIN
-FOR i IN 1..480 LOOP
+FOR i IN 1..474 LOOP
 
   /*raise notice 'dtTime: %', varDtTime;*/
 
