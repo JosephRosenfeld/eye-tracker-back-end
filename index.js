@@ -11,7 +11,7 @@ import bcrypt from "bcrypt";
 const pgSession = connectPgSimple(session);
 dotenv.config();
 const app = express();
-app.set("trust proxy", 1); // trust first proxy
+app.set("trust proxy", 1); // trust first proxy (adding ngrok)
 
 /*--- Middlewares ---*/
 //Need cors options since we're dealing with cookies
@@ -27,10 +27,12 @@ var corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(compression());
+
 // app.use((req, res, next) => {
 //   res.set("Cache-Control", "no-store");
 //   next();
 // });
+
 app.use(
   session({
     store: new pgSession({
@@ -79,7 +81,14 @@ app.post("/api/auth/loginadmin", async (req, res) => {
         isAdmin: true,
         isGuest: false,
       };
-      res.status(200).json({ expires: req.session.cookie.expires });
+      //Set 90 day cookie expirery on admin
+      req.session.cookie.expires = new Date(
+        Date.now() + 1000 * 60 * 60 * 24 * 90
+      );
+      res.status(200).json({
+        expires: req.session.cookie.expires,
+        cookie: req.session.cookie,
+      });
     } else {
       //If pwd is invalid
       res.status(401).json({ errorTxt: "Password is invalid" });
